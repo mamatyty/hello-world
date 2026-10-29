@@ -271,6 +271,7 @@ const show = (id) => {
   screens.forEach((s) => s.classList.toggle("active", s.id === id));
   document.body.classList.toggle("intro", id === "s-intro" || id === "s-review");
   window.scrollTo(0, 0);
+  return notifyPage(id);   // one push notification the first time each page is reached
 };
 
 /* ---- personalisation ---- */
@@ -330,6 +331,27 @@ function notify(title, message, tags) {
   }).then((r) => r.ok).catch(() => false);
 }
 
+/* One notification per page, so you can see how far they got even if they stop halfway. */
+const who = toName === "you" ? "They" : toName;
+const PAGE_NOTIFY = {
+  "s-intro":  () => ["Page 1/5: opened 👀", who + " opened the invite (console page)", ["eyes"]],
+  "s-review": () => ["Page 2/5: lesson review ⭐", who + " pressed Run", ["star"]],
+  "s-ask":    () => ["Page 3/5: the question 🥺",
+                     "Rated the lessons " + rating + "/5" + (liked.size ? ". Liked: " + [...liked].join(", ") : ""),
+                     ["question"]],
+  "s-yes":    () => ["Page 4/5: answer = True 🎉",
+                     "Pressed True after " + noCount + " attempt(s) at False. Now picking the details…",
+                     ["tada"]],
+  "s-done":   () => ["Page 5/5: deployed 💖", $("reply").value, ["heart"]],
+};
+const seenPages = new Set();
+function notifyPage(id) {
+  if (seenPages.has(id) || !PAGE_NOTIFY[id]) return Promise.resolve(false);
+  seenPages.add(id);
+  const [title, message, tags] = PAGE_NOTIFY[id]();
+  return notify(title, message, tags);
+}
+
 /* ---- typewriter in the intro ---- */
 (() => {
   const el = $("typed");
@@ -346,10 +368,7 @@ function notify(title, message, tags) {
 })();
 
 /* ---- screen 1 -> 2 ---- */
-$("open").onclick = () => {
-  show("s-review");
-  notify("Invite opened 👀", toName + " just ran your script", ["eyes"]);
-};
+$("open").onclick = () => show("s-review");
 
 /* ---- lesson review ---- */
 const REVIEW_TEXTS = [
@@ -380,11 +399,7 @@ REVIEW_TAGS.forEach((label) => {
   };
   $("r-tags").appendChild(b);
 });
-$("r-submit").onclick = () => {
-  show("s-ask");
-  notify("Lesson review: " + rating + "/5 ⭐",
-    liked.size ? "Liked: " + [...liked].join(", ") : "No tags picked", ["star"]);
-};
+$("r-submit").onclick = () => show("s-ask");
 
 /* ---- the question ---- */
 let noCount = 0;
@@ -422,7 +437,6 @@ no.addEventListener("click", (e) => e.preventDefault());
 yes.onclick = () => {
   show("s-yes");
   confetti();
-  notify("answer = True 🎉", "Returned True after " + noCount + " attempt(s) at False. Now picking the details…", ["tada"]);
 };
 
 /* ---- choices ---- */
@@ -470,11 +484,10 @@ $("confirm").onclick = () => {
     $("dm").href = "https://ig.me/m/" + encodeURIComponent(CONFIG.instagram);
     $("dm").hidden = false;
   }
-  show("s-done");
-  confetti();
-  notify("Deployed: it's a date! 💖", lines.join("\n"), ["heart"]).then((ok) => {
+  show("s-done").then((ok) => {
     if (ok) $("sent").hidden = false;
   });
+  confetti();
 };
 
 $("copy").onclick = async () => {
@@ -489,6 +502,8 @@ $("copy").onclick = async () => {
   $("copy").textContent = "Copied! Now paste it in our chat 💬";
   $("copy").blur();
 };
+
+notifyPage("s-intro");   // they opened the link
 </script>
 </body>
 </html>
