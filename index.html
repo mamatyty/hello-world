@@ -29,6 +29,10 @@
   body.intro .card { box-shadow: 0 18px 50px rgba(37, 99, 235, .25); }
   body.intro .code { background: #1b2a3d; color: #d6e8ff; }
   body.intro .cursor { background: #d6e8ff; }
+  body.intro .star { color: #c3d8f5; }
+  body.intro .star.on { color: #ffb703; }
+  body.intro .chip { border-color: #bcd3f2; }
+  body.intro .chip.on { border-color: var(--pink); }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   [hidden] { display: none !important; }
@@ -117,6 +121,10 @@
   .row small { display: block; color: var(--muted); font-size: 13px; font-family: var(--mono); }
   .row b { font-size: 17px; }
 
+  .dt {
+    font: inherit; font-weight: 700; font-size: 16px; color: var(--ink); background: #fff;
+    border: 2px solid #f3c4d4; border-radius: 10px; padding: 6px 8px; margin-top: 4px; max-width: 100%;
+  }
   .group { text-align: left; margin-bottom: 18px; }
   .group h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 600; font-family: var(--mono); }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -194,7 +202,7 @@
   <p>Here's the plan. Set the parameters and I'll handle the rest.</p>
 
   <div class="details">
-    <div class="row"><span class="ic">📅</span><div><small>when =</small><b id="d-when"></b></div></div>
+    <div class="row"><span class="ic">📅</span><div><small>when = (tap to change)</small><input type="datetime-local" id="d-when" class="dt"></div></div>
     <div class="row"><span class="ic">📍</span><div><small>where =</small><b id="d-where"></b></div></div>
   </div>
 
@@ -261,7 +269,7 @@ const $ = (id) => document.getElementById(id);
 const screens = document.querySelectorAll(".card");
 const show = (id) => {
   screens.forEach((s) => s.classList.toggle("active", s.id === id));
-  document.body.classList.toggle("intro", id === "s-intro");
+  document.body.classList.toggle("intro", id === "s-intro" || id === "s-review");
   window.scrollTo(0, 0);
 };
 
@@ -270,12 +278,10 @@ const params = new URLSearchParams(location.search);
 const toName = (params.get("to") || CONFIG.theirName).slice(0, 40);
 $("hi").textContent = toName === "you" ? "Hey you" : "Hey " + toName;
 
-const start = new Date(CONFIG.start);
-const end = new Date(start.getTime() + CONFIG.durationHours * 3600 * 1000);
-const whenText = start.toLocaleString(undefined, {
+const fmtWhen = (d) => d.toLocaleString(undefined, {
   weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
 });
-$("d-when").textContent = whenText;
+$("d-when").value = CONFIG.start;   // editable by whoever opens the invite
 $("d-where").textContent = CONFIG.place;
 
 /* ---- confetti ---- */
@@ -416,7 +422,7 @@ yes.onclick = () => {
 
 /* ---- choices ---- */
 const picks = { food: null, after: null };
-document.querySelectorAll(".chips").forEach((box) => {
+document.querySelectorAll(".chips[data-group]").forEach((box) => {
   const group = box.dataset.group;
   CONFIG[group].forEach((label) => {
     const b = document.createElement("button");
@@ -435,6 +441,10 @@ const gcalStamp = (d) =>
   d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "T" + pad2(d.getHours()) + pad2(d.getMinutes()) + "00";
 
 $("confirm").onclick = () => {
+  let start = new Date($("d-when").value);
+  if (isNaN(start)) start = new Date(CONFIG.start);
+  const end = new Date(start.getTime() + CONFIG.durationHours * 3600 * 1000);
+  const whenText = fmtWhen(start);
   const lines = [
     "answer = True 💖",
     "when = " + JSON.stringify(whenText),
