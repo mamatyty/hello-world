@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dcecff">
+<title>ask_question() 🐍</title>
+<meta property="og:title" content="ask_question() 🐍">
+<meta property="og:description" content="Run me :)">
+<style>
+  :root {
+    --bg1: #ffe3ec;
+    --bg2: #ffd1e3;
+    --pink: #ff5c8a;
+    --pink-dark: #e03e70;
+    --ink: #4a2335;
+    --card: #fffafc;
+    --muted: #9b6b80;
+  }
+  /* first page is blue; turns pink after "Run" */
+  body.intro {
+    --bg1: #dcecff;
+    --bg2: #b9d6ff;
+    --pink: #3b82f6;
+    --pink-dark: #2563eb;
+    --muted: #5b7a9e;
+    --card: #fafcff;
+  }
+  body.intro .card { box-shadow: 0 18px 50px rgba(37, 99, 235, .25); }
+  body.intro .code { background: #1b2a3d; color: #d6e8ff; }
+  body.intro .cursor { background: #d6e8ff; }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    background: linear-gradient(160deg, var(--bg1), var(--bg2));
+    min-height: 100dvh;
+    overflow-x: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .card {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 420px;
+    background: var(--card);
+    border-radius: 28px;
+    padding: 32px 24px 28px;
+    box-shadow: 0 18px 50px rgba(224, 62, 112, .25);
+    text-align: center;
+    display: none;
+  }
+  .card.active { display: block; animation: pop .45s cubic-bezier(.2, 1.4, .4, 1); }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .big { font-size: 84px; line-height: 1; margin-bottom: 12px; display: inline-block; }
+  .bounce { animation: bounce 1.4s ease-in-out infinite; }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+
+  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 10px; }
+  p  { margin: 0 0 18px; color: var(--muted); font-size: 16px; line-height: 1.45; }
+
+  button, .btn {
+    font: inherit; font-weight: 700; font-size: 18px;
+    border: 0; border-radius: 999px; cursor: pointer;
+    padding: 14px 28px; color: #fff; background: var(--pink);
+    box-shadow: 0 6px 0 var(--pink-dark);
+    transition: transform .1s, box-shadow .1s;
+    text-decoration: none; display: inline-block;
+  }
+  button:active, .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--pink-dark); }
+  button:disabled { opacity: .5; }
+  .ghost { background: #fff; color: var(--pink-dark); box-shadow: 0 6px 0 #f3c4d4; }
+  .ghost:active { box-shadow: 0 2px 0 #f3c4d4; }
+
+  /* ask screen */
+  .answers { display: flex; gap: 14px; justify-content: center; align-items: center; min-height: 90px; flex-wrap: wrap; }
+  #yes { transform-origin: center; transition: transform .25s cubic-bezier(.2, 1.4, .4, 1); }
+  #no.dodging { position: fixed; z-index: 10; transition: left .25s ease, top .25s ease; }
+  #no.gone { display: none; }
+  .hint { min-height: 40px; margin-top: 22px; font-size: 13px; font-family: var(--mono); color: #c0392b; }
+
+  /* code-flavoured bits */
+  :root { --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .code {
+    font-family: var(--mono); font-size: 14px; line-height: 1.55; text-align: left;
+    background: #2b1b26; color: #ffd9e6; border-radius: 14px; padding: 12px 14px;
+    margin: 0 0 18px; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .code .k { color: #ff8fb3; }
+  .code .s { color: #ffe08a; }
+  .code .c { color: #9b8a93; }
+  .cursor { display: inline-block; width: .6em; background: #ffd9e6; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* review stars */
+  .stars { display: flex; justify-content: center; gap: 4px; margin: 4px 0 0; }
+  .star {
+    font-size: 44px; line-height: 1; padding: 2px 4px; background: none; box-shadow: none;
+    color: #f3c4d4; transition: transform .15s, color .15s;
+  }
+  .star.on { color: #ffb703; }
+  .star:active { transform: scale(1.25); box-shadow: none; }
+  #s-review .hint { margin-top: 6px; min-height: 22px; text-align: center; color: var(--muted); }
+  #s-review .group { margin-top: 10px; }
+
+  /* details */
+  .details { text-align: left; background: #fff1f6; border-radius: 18px; padding: 8px 18px; margin: 0 0 20px; }
+  .row { display: flex; gap: 12px; padding: 12px 0; align-items: center; }
+  .row + .row { border-top: 1px dashed #f3c4d4; }
+  .row .ic { font-size: 26px; }
+  .row small { display: block; color: var(--muted); font-size: 13px; font-family: var(--mono); }
+  .row b { font-size: 17px; }
+
+  .group { text-align: left; margin-bottom: 18px; }
+  .group h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 600; font-family: var(--mono); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 16px; font-weight: 600; padding: 10px 14px; border-radius: 999px;
+    background: #fff; color: var(--ink); box-shadow: none; border: 2px solid #f3c4d4;
+  }
+  .chip:active { transform: scale(.96); box-shadow: none; }
+  .chip.on { background: var(--pink); color: #fff; border-color: var(--pink); }
+
+  textarea {
+    width: 100%; height: 110px; border-radius: 14px; border: 2px solid #f3c4d4;
+    padding: 10px; font: inherit; font-size: 15px; color: var(--ink); background: #fff; resize: none; margin-bottom: 14px;
+  }
+  .stack { display: flex; flex-direction: column; gap: 14px; align-items: stretch; }
+
+  canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bounce { animation: none; }
+  }
+</style>
+</head>
+<body class="intro">
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<!-- 1. intro -->
+<main class="card active" id="s-intro">
+  <div class="big bounce">🐍</div>
+  <h1><span id="hi">Hey you</span>!</h1>
+  <pre class="code" id="typed" aria-label="Python console"></pre>
+  <p>I have something to ask you.<br>It's important. Very.</p>
+  <button id="open">Run ▶</button>
+</main>
+
+<!-- 1b. lesson review -->
+<main class="card" id="s-review">
+  <div class="big bounce">🎓</div>
+  <h1>Rate my lessons</h1>
+  <p>How were my Python lessons?</p>
+  <div class="stars" id="stars" role="radiogroup" aria-label="Rating">
+    <button type="button" class="star" aria-label="1 star">★</button>
+    <button type="button" class="star" aria-label="2 stars">★</button>
+    <button type="button" class="star" aria-label="3 stars">★</button>
+    <button type="button" class="star" aria-label="4 stars">★</button>
+    <button type="button" class="star" aria-label="5 stars">★</button>
+  </div>
+  <p class="hint" id="r-note">tap a star</p>
+  <div class="group">
+    <h2># liked = [...]  (optional)</h2>
+    <div class="chips" id="r-tags"></div>
+  </div>
+  <button id="r-submit" disabled>Submit review</button>
+</main>
+
+<!-- 2. the question -->
+<main class="card" id="s-ask">
+  <div class="big" id="face">🥺</div>
+  <pre class="code"><span class="c"># date.py</span>
+<span class="k">def</span> go_on_date(you):
+    <span class="k">return</span> you.say(<span class="s">???</span>)</pre>
+  <h1>Will you go on a date with me?</h1>
+  <div class="answers" id="answers">
+    <button id="yes">return True 💖</button>
+    <button id="no" class="ghost">return False</button>
+  </div>
+  <p class="hint" id="hint"></p>
+</main>
+
+<!-- 3. yes! details + choices -->
+<main class="card" id="s-yes">
+  <div class="big bounce">🥰</div>
+  <h1>True! It's a date!</h1>
+  <p>Here's the plan. Set the parameters and I'll handle the rest.</p>
+
+  <div class="details">
+    <div class="row"><span class="ic">📅</span><div><small>when =</small><b id="d-when"></b></div></div>
+    <div class="row"><span class="ic">📍</span><div><small>where =</small><b id="d-where"></b></div></div>
+  </div>
+
+  <div class="group">
+    <h2># food = input("I'm hungry for…")</h2>
+    <div class="chips" data-group="food"></div>
+  </div>
+  <div class="group">
+    <h2># after = input("and then…")</h2>
+    <div class="chips" data-group="after"></div>
+  </div>
+
+  <button id="confirm">Commit &amp; push 🚀</button>
+</main>
+
+<!-- 4. send the answer back -->
+<main class="card" id="s-done">
+  <div class="big bounce">💘</div>
+  <h1>Deployed to production!</h1>
+  <p id="sent" hidden>✅ All tests passed, I got your answer. See you there!</p>
+  <p>Want to drop it in our chat too? No merge conflicts, promise:</p>
+  <textarea id="reply" readonly></textarea>
+  <div class="stack">
+    <button id="copy">Copy my answer</button>
+    <a class="btn ghost" id="dm" target="_blank" rel="noopener" hidden>Open our chat</a>
+    <a class="btn ghost" id="gcal" target="_blank" rel="noopener">Add to calendar 📅</a>
+  </div>
+</main>
+
+<script>
+/* ============ EDIT THESE ============ */
+const CONFIG = {
+  theirName: "you",                  // can also be set per link: ?to=Anna
+  myName: "Matyas",
+  start: "2026-11-14T19:00",         // local time, ISO format
+  durationHours: 3,
+  place: "Somewhere cozy (surprise!)",
+  instagram: "",                     // your IG username (no @) for the "Open our chat" button, or leave empty
+  // Instant push notification to your phone via ntfy.sh (free, no account).
+  // Install the "ntfy" app, subscribe to this topic. Pick a long random name: it acts as the password.
+  // Leave empty to disable.
+  notifyTopic: "",                   // e.g. "date-invite-k7x92qpl4m"
+  food: ["🍕 Pizza", "🍣 Sushi", "🍝 Pasta", "🌮 Tacos", "🍔 Burgers", "🥗 Surprise me"],
+  after: ["🍦 Ice cream walk", "🎬 Movie", "🍷 Drinks", "🎲 Board games", "🐍 Python lesson 2.0", "🌃 Just wander"],
+};
+
+/* Python errors shown when they try to say no */
+const NO_TEXTS = [
+  "SyntaxError: 'no' is not valid here 🥺",
+  "TypeError: expected True, got heartbreak",
+  "IndentationError: unexpected sadness",
+  "NameError: name 'no' is not defined",
+  "ZeroDivisionError: my hope / 0",
+  "KeyError: 'maybe' not in answers",
+  "RecursionError: asked too many times",
+  "KeyboardInterrupt: please don't 🙈",
+  "except: pass  # still waiting for True",
+  "sys.exit() failed. Only True remains 😏",
+];
+const FACES = ["🥺", "😢", "😭", "🥹", "💔", "😤", "🙈", "😳", "😏", "🐍"];
+/* ==================================== */
+
+const $ = (id) => document.getElementById(id);
+const screens = document.querySelectorAll(".card");
+const show = (id) => {
+  screens.forEach((s) => s.classList.toggle("active", s.id === id));
+  document.body.classList.toggle("intro", id === "s-intro");
+  window.scrollTo(0, 0);
+};
+
+/* ---- personalisation ---- */
+const params = new URLSearchParams(location.search);
+const toName = (params.get("to") || CONFIG.theirName).slice(0, 40);
+$("hi").textContent = toName === "you" ? "Hey you" : "Hey " + toName;
+
+const start = new Date(CONFIG.start);
+const end = new Date(start.getTime() + CONFIG.durationHours * 3600 * 1000);
+const whenText = start.toLocaleString(undefined, {
+  weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+});
+$("d-when").textContent = whenText;
+$("d-where").textContent = CONFIG.place;
+
+/* ---- confetti ---- */
+const cv = $("confetti"), cx = cv.getContext("2d");
+let parts = [], raf = 0;
+function sizeCanvas() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener("resize", sizeCanvas); sizeCanvas();
+function confetti() {
+  const glyphs = ["💖", "💗", "✨", "🌸", "🎉", "💕"];
+  for (let i = 0; i < 90; i++) {
+    parts.push({
+      x: innerWidth / 2, y: innerHeight * 0.45,
+      vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 14 - 3,
+      r: 14 + Math.random() * 14, g: glyphs[i % glyphs.length],
+      rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, life: 120 + Math.random() * 60,
+    });
+  }
+  cancelAnimationFrame(raf);
+  (function tick() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    parts = parts.filter((p) => p.life > 0 && p.y < cv.height + 40);
+    for (const p of parts) {
+      p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot);
+      cx.globalAlpha = Math.min(1, p.life / 30);
+      cx.font = p.r + "px serif"; cx.textAlign = "center"; cx.textBaseline = "middle";
+      cx.fillText(p.g, 0, 0); cx.restore();
+    }
+    if (parts.length) raf = requestAnimationFrame(tick);
+    else cx.clearRect(0, 0, cv.width, cv.height);
+  })();
+}
+
+/* ---- push notification to the sender (optional) ---- */
+function notify(title, message, tags) {
+  if (!CONFIG.notifyTopic) return Promise.resolve(false);
+  return fetch("https://ntfy.sh/", {
+    method: "POST",
+    keepalive: true,
+    body: JSON.stringify({ topic: CONFIG.notifyTopic, title, message, tags: tags || [] }),
+  }).then((r) => r.ok).catch(() => false);
+}
+
+/* ---- typewriter in the intro ---- */
+(() => {
+  const el = $("typed");
+  const text = ">>> import you\n>>> ask_question()";
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (still) { el.textContent = text; return; }
+  let i = 0;
+  const cursor = '<span class="cursor">&nbsp;</span>';
+  (function type() {
+    el.textContent = text.slice(0, i);
+    el.insertAdjacentHTML("beforeend", cursor);
+    if (i++ < text.length) setTimeout(type, 60 + Math.random() * 60);
+  })();
+})();
+
+/* ---- screen 1 -> 2 ---- */
+$("open").onclick = () => {
+  show("s-review");
+  notify("Invite opened 👀", toName + " just ran your script", ["eyes"]);
+};
+
+/* ---- lesson review ---- */
+const REVIEW_TEXTS = [
+  "AssertionError: expected a better teacher 😭",
+  "DeprecationWarning: teaching style outdated",
+  "Works on my machine 🤷",
+  "Passed with minor warnings ✅",
+  "100% test coverage 🏆",
+];
+const REVIEW_TAGS = ["🧠 Clear explanations", "😂 Your jokes", "🙏 Patience", "🐛 Debugging together"];
+let rating = 0;
+const liked = new Set();
+const stars = [...document.querySelectorAll(".star")];
+stars.forEach((s, i) => {
+  s.onclick = () => {
+    rating = i + 1;
+    stars.forEach((x, j) => x.classList.toggle("on", j < rating));
+    $("r-note").textContent = REVIEW_TEXTS[i];
+    $("r-submit").disabled = false;
+  };
+});
+REVIEW_TAGS.forEach((label) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = label;
+  b.onclick = () => {
+    liked.has(label) ? liked.delete(label) : liked.add(label);
+    b.classList.toggle("on", liked.has(label));
+  };
+  $("r-tags").appendChild(b);
+});
+$("r-submit").onclick = () => {
+  show("s-ask");
+  notify("Lesson review: " + rating + "/5 ⭐",
+    liked.size ? "Liked: " + [...liked].join(", ") : "No tags picked", ["star"]);
+};
+
+/* ---- the question ---- */
+let noCount = 0;
+const yes = $("yes"), no = $("no");
+
+function dodge() {
+  noCount++;
+  $("face").textContent = FACES[Math.min(noCount - 1, FACES.length - 1)];
+  $("hint").textContent = NO_TEXTS[Math.min(noCount - 1, NO_TEXTS.length - 1)];
+
+  // Yes grows every time
+  yes.style.transform = "scale(" + Math.min(1 + noCount * 0.16, 2.1) + ")";
+
+  if (noCount >= 10) { no.classList.add("gone"); return; }
+
+  // No jumps somewhere else on screen (not on top of Yes)
+  no.classList.add("dodging");
+  const w = no.offsetWidth, h = no.offsetHeight, pad = 12;
+  const yr = yes.getBoundingClientRect();
+  let x, y, tries = 0;
+  do {
+    x = pad + Math.random() * (innerWidth - w - pad * 2);
+    y = pad + Math.random() * (innerHeight - h - pad * 2);
+    tries++;
+  } while (tries < 20 &&
+    x < yr.right + 12 && x + w > yr.left - 12 && y < yr.bottom + 12 && y + h > yr.top - 12);
+  no.style.left = x + "px";
+  no.style.top = y + "px";
+}
+// pointerdown catches touch before the click would land
+no.addEventListener("pointerdown", (e) => { e.preventDefault(); dodge(); });
+no.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") dodge(); });
+no.addEventListener("click", (e) => e.preventDefault());
+
+yes.onclick = () => {
+  show("s-yes");
+  confetti();
+  notify("answer = True 🎉", "Returned True after " + noCount + " attempt(s) at False. Now picking the details…", ["tada"]);
+};
+
+/* ---- choices ---- */
+const picks = { food: null, after: null };
+document.querySelectorAll(".chips").forEach((box) => {
+  const group = box.dataset.group;
+  CONFIG[group].forEach((label) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = label;
+    b.onclick = () => {
+      picks[group] = picks[group] === label ? null : label;
+      box.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.textContent === picks[group]));
+    };
+    box.appendChild(b);
+  });
+});
+
+/* ---- final screen ---- */
+const pad2 = (n) => String(n).padStart(2, "0");
+const gcalStamp = (d) =>
+  d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "T" + pad2(d.getHours()) + pad2(d.getMinutes()) + "00";
+
+$("confirm").onclick = () => {
+  const lines = [
+    "answer = True 💖",
+    "when = " + JSON.stringify(whenText),
+    "where = " + JSON.stringify(CONFIG.place),
+  ];
+  if (picks.food) lines.push("food = " + JSON.stringify(picks.food));
+  if (picks.after) lines.push("after = " + JSON.stringify(picks.after));
+  lines.push("lessons_rating = " + rating + " ⭐");
+  lines.push("# tests passed ✅");
+  $("reply").value = lines.join("\n");
+
+  $("gcal").href = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+    "&text=" + encodeURIComponent("Date with " + CONFIG.myName + " 💖") +
+    "&dates=" + gcalStamp(start) + "/" + gcalStamp(end) +
+    "&location=" + encodeURIComponent(CONFIG.place);
+
+  if (CONFIG.instagram) {
+    $("dm").href = "https://ig.me/m/" + encodeURIComponent(CONFIG.instagram);
+    $("dm").hidden = false;
+  }
+  show("s-done");
+  confetti();
+  notify("Deployed: it's a date! 💖", lines.join("\n"), ["heart"]).then((ok) => {
+    if (ok) $("sent").hidden = false;
+  });
+};
+
+$("copy").onclick = async () => {
+  const ta = $("reply");
+  try {
+    await navigator.clipboard.writeText(ta.value);
+  } catch (_) {
+    ta.removeAttribute("readonly"); ta.select(); ta.setSelectionRange(0, 9999);
+    try { document.execCommand("copy"); } catch (__) {}
+    ta.setAttribute("readonly", "");
+  }
+  $("copy").textContent = "Copied! Now paste it in our chat 💬";
+  $("copy").blur();
+};
+</script>
+</body>
+</html>
