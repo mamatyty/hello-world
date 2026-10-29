@@ -243,8 +243,8 @@ const CONFIG = {
   instagram: "",                     // your IG username (no @) for the "Open our chat" button, or leave empty
   // Instant push notification to your phone via ntfy.sh (free, no account).
   // Install the "ntfy" app, subscribe to this topic. Pick a long random name: it acts as the password.
-  // Leave empty to disable.
-  notifyTopic: "",                   // e.g. "date-invite-k7x92qpl4m"
+  // Leave empty here (the repo is public!) and put it in the link instead: …/hello-world/#n=date-invite-k7x92qpl4m
+  notifyTopic: "",
   food: ["🍕 Pizza", "🍣 Sushi", "🍝 Pasta", "🌮 Tacos", "🍔 Burgers", "🥗 Surprise me"],
   after: ["🍦 Ice cream walk", "🎬 Movie", "🍷 Drinks", "🎲 Board games", "🐍 Python lesson 2.0", "🌃 Just wander"],
 };
@@ -316,12 +316,17 @@ function confetti() {
 }
 
 /* ---- push notification to the sender (optional) ---- */
+// The topic can come from the link's #fragment (…/hello-world/#n=my-secret-topic),
+// so it never has to be written into the public repo. Fragments aren't sent to any server.
+const topicFromLink = new URLSearchParams(location.hash.slice(1)).get("n") || "";
+const NOTIFY_TOPIC = /^[A-Za-z0-9_-]{1,64}$/.test(topicFromLink) ? topicFromLink : CONFIG.notifyTopic;
+
 function notify(title, message, tags) {
-  if (!CONFIG.notifyTopic) return Promise.resolve(false);
+  if (!NOTIFY_TOPIC) return Promise.resolve(false);
   return fetch("https://ntfy.sh/", {
     method: "POST",
     keepalive: true,
-    body: JSON.stringify({ topic: CONFIG.notifyTopic, title, message, tags: tags || [] }),
+    body: JSON.stringify({ topic: NOTIFY_TOPIC, title, message, tags: tags || [] }),
   }).then((r) => r.ok).catch(() => false);
 }
 
